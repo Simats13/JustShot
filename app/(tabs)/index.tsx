@@ -1,73 +1,102 @@
-import React, { useRef, useState, useCallback } from "react";
+import JustShotPhoto from "@/components/JustShotPhoto";
+import { useScrollToTop } from "@react-navigation/native";
+import React, { useRef, useCallback } from "react";
 import {
   View,
-  FlatList,
-  Alert,
+  Text,
   Animated,
-  NativeSyntheticEvent,
   NativeScrollEvent,
+  NativeSyntheticEvent,
+  Dimensions,
 } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { useScrollToTop } from "@react-navigation/native";
-import JustShotPhoto from "@/components/JustShotPhoto";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import tweets from "@/app/config/tweets";
 
-const SCROLL_DISTANCE = 100;
-
-export default function HomeScreen() {
+export default function Home() {
+  const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
+  const lastScrollY = useRef(0);
   const flatListRef = useRef(null);
-  const [isScrollingDown, setIsScrollingDown] = useState(false);
-  const lastOffsetY = useRef(0);
+
+  const headerHeight = 60;
+  const headerOpacity = useRef(new Animated.Value(1)).current;
+
+  // Estimate the height of the bottom navigation bar
+  const bottomNavHeight = 50; // Adjust this value based on your actual navbar height
 
   useScrollToTop(flatListRef);
 
-  const handleScroll = Animated.event<NativeScrollEvent>(
-    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-    {
-      useNativeDriver: true,
-      listener: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-        const currentOffsetY = event.nativeEvent.contentOffset.y;
-        if (currentOffsetY > lastOffsetY.current) {
-          setIsScrollingDown(true);
-        } else if (currentOffsetY < lastOffsetY.current) {
-          setIsScrollingDown(false);
-        }
-        lastOffsetY.current = currentOffsetY;
-      },
-    }
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const currentScrollY = event.nativeEvent.contentOffset.y;
+      const diff = currentScrollY - lastScrollY.current;
+
+      if (currentScrollY <= 0) {
+        // At the top of the list
+        Animated.timing(headerOpacity, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+      } else if (diff > 0) {
+        // Scrolling down
+        Animated.timing(headerOpacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+      } else if (diff < 0) {
+        // Scrolling up
+        Animated.timing(headerOpacity, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+      }
+
+      lastScrollY.current = currentScrollY;
+      scrollY.setValue(currentScrollY);
+    },
+    [headerOpacity, scrollY]
   );
 
-  const handleFloatingButtonPress = useCallback(() => {
-    Alert.alert("New Post", "Create a new post?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "OK", onPress: () => console.log("OK Pressed") },
-    ]);
-  }, []);
-
-  const animatedOpacity = scrollY.interpolate({
-    inputRange: [0, SCROLL_DISTANCE],
-    outputRange: [1, 0.5],
-    extrapolate: "clamp",
-  });
-
-  const buttonOpacity = Animated.add(
-    Animated.multiply(isScrollingDown ? 1 : 0, animatedOpacity),
-    Animated.multiply(isScrollingDown ? 0 : 1, new Animated.Value(1))
+  const renderHeader = () => (
+    <Animated.View
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: headerHeight + insets.top,
+        backgroundColor: "white",
+        opacity: headerOpacity,
+        zIndex: 1000,
+        paddingTop: insets.top,
+        justifyContent: "center",
+        alignItems: "center",
+        borderBottomWidth: 1,
+        borderBottomColor: "#e0e0e0",
+      }}
+    >
+      <Text style={{ fontSize: 18, fontWeight: "bold" }}>Accueil</Text>
+    </Animated.View>
   );
 
   return (
-    <GestureHandlerRootView className="flex-1">
-      <View className="flex-1 bg-white">
-        <Animated.FlatList
-          ref={flatListRef}
-          data={tweets}
-          renderItem={({ item }) => <JustShotPhoto justphotoposts={item} />}
-          keyExtractor={(item) => item.id.toString()}
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
-        />
-      </View>
-    </GestureHandlerRootView>
+    <View style={{ flex: 1 }}>
+      {renderHeader()}
+      <Animated.FlatList
+        ref={flatListRef}
+        data={tweets}
+        renderItem={({ item }) => <JustShotPhoto justphotoposts={item} />}
+        keyExtractor={(item) => item.id.toString()}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        contentContainerStyle={{
+          paddingTop: headerHeight + insets.top,
+          paddingBottom: bottomNavHeight + insets.bottom + 20, // Add padding for the bottom navbar
+        }}
+      />
+    </View>
   );
 }
