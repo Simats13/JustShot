@@ -11,7 +11,6 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useScrollToTop } from "@react-navigation/native";
 import JustShotPhoto from "@/components/JustShotPhoto";
 import tweets from "@/app/config/tweets";
-import { FloatingButton } from "@/components/FloatingButton";
 
 const SCROLL_DISTANCE = 100;
 
@@ -67,10 +66,6 @@ export default function HomeScreen() {
           keyExtractor={(item) => item.id.toString()}
           onScroll={handleScroll}
           scrollEventThrottle={16}
-        />
-        <FloatingButton
-          onPress={handleFloatingButtonPress}
-          opacity={buttonOpacity}
         />
       </View>
     </GestureHandlerRootView>
