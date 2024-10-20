@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from "react";
-import { TouchableOpacity, Text, Animated } from "react-native";
+import { TouchableOpacity, View, Animated } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
 type FeatherIconName = React.ComponentProps<typeof Feather>["name"];
@@ -14,6 +14,8 @@ const getIconName = (routeName: string): FeatherIconName => {
       return "search";
     case "notifications":
       return "bell";
+    case "addShot":
+      
     default:
       return "circle";
   }
@@ -70,20 +72,20 @@ const TabBarButton: React.FC<TabBarButtonProps> = ({
     <TouchableOpacity
       onPress={handlePress}
       onLongPress={onLongPress}
-      style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+      className="flex-1 justify-center items-center min-w-12 min-h-12 z-10"
     >
-      <Animated.View
-        style={{
-          transform: [{ scale: scaleValue }],
-          alignItems: "center",
-        }}
-      >
-        <Feather
-          name={getIconName(routeName)}
-          size={24}
-          color={isFocused ? primaryColor : "gray"}
-        />
-      </Animated.View>
+      <View className="flex-1 justify-center items-center">
+        <Animated.View
+          style={{ transform: [{ scale: scaleValue }] }}
+          className="items-center"
+        >
+          <Feather
+            name={getIconName(routeName)}
+            size={24}
+            color={isFocused ? primaryColor : "gray"}
+          />
+        </Animated.View>
+      </View>
     </TouchableOpacity>
   );
 };

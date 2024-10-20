@@ -9,7 +9,7 @@ const PRIMARY_COLOR = "#FF4757"; // Red color for the add button
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   return (
     <View className="absolute bottom-6 left-4 right-4">
-      <View className="flex-row bg-white rounded-3xl shadow-lg shadow-black shadow-opacity-25 shadow-radius-5 h-16 items-center justify-between px-2 relative">
+      <View className="flex-row bg-white rounded-3xl shadow-lg shadow-black/25 h-16 items-center justify-between px-2 relative">
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
           const label =
@@ -42,13 +42,10 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 
           if (route.name === "addShot") {
             return (
-              <View
-                key={route.key}
-                className="absolute left-0 right-0 items-center -top-5 z-10"
-              >
+              <View key={route.key} className="flex-1 items-center justify-center z-20 mb-10">
                 <TouchableOpacity
                   onPress={onPress}
-                  className="w-14 h-14 bg-red-500 rounded-full items-center justify-center shadow-lg"
+                  className="w-14 h-14 bg-red-500 rounded-full items-center justify-center shadow-lg absolute -top-5"
                 >
                   <Feather name="plus" size={28} color="white" />
                 </TouchableOpacity>

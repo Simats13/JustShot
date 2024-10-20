@@ -16,16 +16,17 @@ export default function TabLayout() {
           title: "Accueil",
         }}
       />
-      <Tabs.Screen
-        name="addShot"
-        options={{
-          title: "Add Shot",
-        }}
-      />
+
       <Tabs.Screen
         name="explore"
         options={{
           title: "Explore",
+        }}
+      />
+      <Tabs.Screen
+        name="addShot"
+        options={{
+          title: "Add Shot",
         }}
       />
       <Tabs.Screen
