@@ -43,6 +43,13 @@
           "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos.",
           "isAccessMediaLocationEnabled": true
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Autoriser $(PRODUCT_NAME) à accéder à vos photos afin de poster vos meilleurs Shots.",
+          "cameraPermission": "Autoriser $(PRODUCT_NAME) à accéder à votre camera afin de poster vos meilleurs Shots."
+        }
       ]
     ],
     "experiments": {
