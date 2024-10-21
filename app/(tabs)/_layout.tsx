@@ -1,11 +1,16 @@
 import { Tabs } from "expo-router";
 import React from "react";
 import { TabBar } from "@/components/navigation/TabBar";
+import { usePathname } from "expo-router";
 
-export default function TabLayout() {
+export default function RootLayout() {
+  const pathname = usePathname();
+
   return (
     <Tabs
-      tabBar={(props) => <TabBar {...props} />}
+      tabBar={(props) =>
+        pathname === "/addShot" ? null : <TabBar {...props} />
+      }
       screenOptions={{
         headerShown: false,
       }}
@@ -16,7 +21,6 @@ export default function TabLayout() {
           title: "Accueil",
         }}
       />
-
       <Tabs.Screen
         name="explore"
         options={{
@@ -26,7 +30,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="addShot"
         options={{
-          title: "Add Shot",
+          href: null,
         }}
       />
       <Tabs.Screen
