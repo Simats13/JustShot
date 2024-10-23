@@ -28,12 +28,6 @@ export default function RootLayout() {
         }}
       />
       <Tabs.Screen
-        name="addShot"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
         name="notifications"
         options={{
           title: "Notifications",
