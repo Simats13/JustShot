@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-  useMemo,
-} from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -16,6 +10,7 @@ import {
   PanResponder,
   StatusBar,
   SafeAreaView,
+  Alert,
 } from "react-native";
 import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
 import * as MediaLibrary from "expo-media-library";
@@ -23,17 +18,20 @@ import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
+import { ImageEditor } from "expo-crop-image";
 
 const { width, height } = Dimensions.get("window");
 const HEADER_HEIGHT = 60;
 const IMAGE_HEIGHT = width;
 const IMAGES_LIMIT = 50;
+const DAILY_THEME = "La nature en ville";
 
 const AddShot: React.FC = () => {
   const [type, setType] = useState<CameraType>("back");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [recentImages, setRecentImages] = useState<MediaLibrary.Asset[]>([]);
   const [cameraVisible, setCameraVisible] = useState(false);
+  const [showThemeAlert, setShowThemeAlert] = useState(true);
   const cameraRef = useRef<CameraView>(null);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [mediaLibraryPermission, requestMediaLibraryPermission] =
@@ -42,11 +40,11 @@ const AddShot: React.FC = () => {
   const [currentDate, setCurrentDate] = useState<string>("");
   const [dateIndicatorVisible, setDateIndicatorVisible] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
-
-  const scrollY = useRef(new Animated.Value(0)).current;
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
+  const scrollY = useRef(new Animated.Value(0)).current;
   const flatListRef = useRef<FlatList<MediaLibrary.Asset>>(null);
+  const [isEditingImage, setIsEditingImage] = useState(false);
 
   useEffect(() => {
     loadRecentImages();
@@ -60,6 +58,29 @@ const AddShot: React.FC = () => {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (isGalleryOpen) {
+      setShowThemeAlert(false);
+    } else {
+      setShowThemeAlert(true);
+    }
+  }, [isGalleryOpen]);
+
+  const handleImagePress = () => {
+    setIsEditingImage(true);
+  };
+
+  const handleEditComplete = (editedUri: string) => {
+    setSelectedImage(editedUri);
+    setIsEditingImage(false);
+  };
+
+  const showThemePopup = () => {
+    Alert.alert("Thème du jour", DAILY_THEME, [
+      { text: "OK", onPress: () => {} },
+    ]);
+  };
 
   const loadRecentImages = async () => {
     if (mediaLibraryPermission?.status !== "granted") {
@@ -152,7 +173,6 @@ const AddShot: React.FC = () => {
       allowsEditing: false,
       aspect: [4, 3],
       quality: 1,
-      
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
@@ -231,6 +251,7 @@ const AddShot: React.FC = () => {
           }
         }
         setDateIndicatorVisible(y > 0);
+        setIsGalleryOpen(y > IMAGE_HEIGHT / 2);
       },
     }
   );
@@ -247,7 +268,7 @@ const AddShot: React.FC = () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: false,
+        allowsEditing: true,
         quality: 1,
         aspect: [4, 3],
       });
@@ -312,16 +333,30 @@ const AddShot: React.FC = () => {
       <StatusBar barStyle="light-content" />
 
       {/* Header */}
-      <View className="flex-row justify-between items-center px-4 h-11 z-10">
-        <TouchableOpacity onPress={handleClose}>
-          <Ionicons name="close" size={24} color="white" />
-        </TouchableOpacity>
-        <Text className="text-white text-lg font-bold">
-          Nouvelle publication
-        </Text>
-        <TouchableOpacity onPress={handleNext}>
-          <Text className="text-blue-500 text-base">Suivant</Text>
-        </TouchableOpacity>
+      <View className="flex-col z-10">
+        <View className="flex-row justify-between items-center px-4 h-11">
+          <TouchableOpacity onPress={handleClose}>
+            <Ionicons name="close" size={24} color="white" />
+          </TouchableOpacity>
+          <Text className="text-white text-lg font-bold">
+            Nouvelle publication
+          </Text>
+          <TouchableOpacity onPress={handleNext}>
+            <Text className="text-blue-500 text-base">Suivant</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Theme Alert */}
+        {showThemeAlert && (
+          <View className="mx-4 mt-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+            <View className="flex-row items-center">
+              <Text className="text-yellow-500 mr-2">📸</Text>
+              <Text className="text-yellow-500 font-medium">
+                Thème du jour : {DAILY_THEME}
+              </Text>
+            </View>
+          </View>
+        )}
       </View>
 
       {/* Selected Image */}
@@ -329,12 +364,18 @@ const AddShot: React.FC = () => {
         style={{
           opacity: imageOpacity,
           transform: [{ scale: imageScale }],
-          height: IMAGE_HEIGHT,
+          height: IMAGE_HEIGHT - 50,
         }}
-        className="mx-4 rounded-lg overflow-hidden border border-gray-700"
+        className="mx-4 mt-4 rounded-lg overflow-hidden border border-gray-700"
       >
         {selectedImage ? (
-          <Image source={{ uri: selectedImage }} className="w-full h-full" />
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={handleImagePress}
+            className="w-full h-full"
+          >
+            <Image source={{ uri: selectedImage }} className="w-full h-full" />
+          </TouchableOpacity>
         ) : (
           <View className="w-full h-full bg-gray-800" />
         )}
@@ -358,13 +399,24 @@ const AddShot: React.FC = () => {
         }}
       >
         <View className="bg-black py-2 px-4 flex-row justify-between items-center">
-          <Text className="text-white text-lg font-semibold">Récentes</Text>
+          <View className="flex-row items-center">
+            <Text className="text-white text-lg font-semibold">Récentes</Text>
+            {isGalleryOpen && (
+              <TouchableOpacity
+                onPress={showThemePopup}
+                className="ml-3 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20"
+              >
+                <Text className="text-yellow-500">📸 Thème</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           <Ionicons
             name={isGalleryOpen ? "chevron-down" : "chevron-up"}
             size={24}
             color="white"
           />
         </View>
+
         <Animated.FlatList
           ref={flatListRef}
           data={recentImages}
@@ -413,6 +465,45 @@ const AddShot: React.FC = () => {
           </CameraView>
         </View>
       )}
+      <ImageEditor
+        editorOptions={{
+          controlBar: {
+            cancelButton: {
+              color: "white",
+              text: "Annuler",
+              iconName: "x",
+            },
+            cropButton: {
+              color: "white",
+              text: "Recadrer",
+              iconName: "crop",
+            },
+            backButton: {
+              color: "white",
+              text: "Retour",
+              iconName: "arrow-left",
+            },
+            saveButton: {
+              color: "white",
+              text: "Terminer",
+              iconName: "save",
+            },
+          },
+        }}
+        isVisible={isEditingImage}
+        imageUri={selectedImage}
+        fixedAspectRatio={1}
+        minimumCropDimensions={{
+          width: 50,
+          height: 50,
+        }}
+        onEditingCancel={() => {
+          setIsEditingImage(false);
+        }}
+        onEditingComplete={(image) => {
+          handleEditComplete(image.uri);
+        }}
+      />
     </SafeAreaView>
   );
 };
