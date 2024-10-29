@@ -1,6 +1,8 @@
 import JustShotPhoto from "@/components/JustShotPhoto";
 import { useScrollToTop } from "@react-navigation/native";
 import React, { useRef, useCallback } from "react";
+import { FlashList } from "@shopify/flash-list";
+
 import {
   View,
   Text,
@@ -23,6 +25,10 @@ export default function Home() {
 
   // Estimate the height of the bottom navigation bar
   const bottomNavHeight = 50; // Adjust this value based on your actual navbar height
+  const { width } = Dimensions.get("window");
+
+  const ITEM_SIZE = width / 3 - 8;
+
 
   useScrollToTop(flatListRef);
 
@@ -85,16 +91,17 @@ export default function Home() {
   return (
     <View style={{ flex: 1 }}>
       {renderHeader()}
-      <Animated.FlatList
+      <FlashList
         ref={flatListRef}
         data={tweets}
         renderItem={({ item }) => <JustShotPhoto justphotoposts={item} />}
         keyExtractor={(item) => item.id.toString()}
         onScroll={handleScroll}
+        estimatedItemSize={ITEM_SIZE}
         scrollEventThrottle={16}
         contentContainerStyle={{
           paddingTop: headerHeight + insets.top,
-          paddingBottom: bottomNavHeight + insets.bottom + 20, // Add padding for the bottom navbar
+          paddingBottom: bottomNavHeight + insets.bottom + 20,
         }}
       />
     </View>

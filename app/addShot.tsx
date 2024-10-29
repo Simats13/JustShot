@@ -41,10 +41,9 @@ export const AddShot = () => {
       recentImages,
       selectedAssetId,
       isLoading,
-      hasMoreImages,
       isGalleryOpen,
     },
-    actions: { handleSelectImage, openImagePicker, closeGallery },
+    actions: { handleSelectImage, openImagePicker, closeGallery, openGallery },
     refs: { flatListRef },
   } = useGallery({
     onSelectImage: setSelectedImage,
@@ -112,6 +111,8 @@ export const AddShot = () => {
       onBack={handleBack}
       onNext={handleNext}
       theme={DAILY_THEME}
+      openGallery={openGallery}
+      closeGallery={closeGallery}
       previewVisible={isImagePreviewVisible}
       onPreviewClose={() => handleImagePreview(false)}
       onImagePress={() => handleImagePreview(true)}
@@ -127,7 +128,6 @@ export const AddShot = () => {
           onSelectImage={handleSelectImage}
           onOpenPicker={openImagePicker}
           isLoading={isLoading}
-          hasMoreImages={hasMoreImages}
           handleScroll={handleScroll}
         />
       }

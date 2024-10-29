@@ -28,12 +28,6 @@ const IconButton: React.FC<IconButtonProps> = ({
   </TouchableOpacity>
 );
 
-const FloatingButton: React.FC<{ onPress: () => void }> = ({ onPress }) => (
-  <TouchableOpacity  onPress={onPress} className="bg-blue-500 p-2 rounded-full">
-    <Entypo name="plus" size={24} color="white" />
-  </TouchableOpacity>
-);
-
 const JustShotPhoto: React.FC<JustPhotoProps> = ({ justphotoposts }) => {
   return (
     <View className="flex-1 p-2 bg-white">

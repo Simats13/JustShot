@@ -3,10 +3,10 @@ import { Animated, FlatList } from "react-native";
 import * as MediaLibrary from "expo-media-library";
 import * as ImagePicker from "expo-image-picker";
 import { Platform, Alert } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 
 interface UseGalleryProps {
   onSelectImage: (uri: string) => void;
-  imagesPerPage?: number;
   scrollY?: Animated.Value;
 }
 
@@ -14,29 +14,28 @@ interface GalleryState {
   recentImages: MediaLibrary.Asset[];
   selectedAssetId: string | null;
   isLoading: boolean;
-  hasMoreImages: boolean;
   error: string | null;
   permissionStatus: MediaLibrary.PermissionStatus | null;
   isGalleryOpen: boolean;
 }
 
 interface GalleryActions {
-  loadRecentImages: (nextPage?: number) => Promise<void>;
+  loadRecentImages: () => Promise<void>;
   handleSelectImage: (asset: MediaLibrary.Asset) => Promise<void>;
   openImagePicker: () => Promise<void>;
   retryLoadImages: () => Promise<void>;
   closeGallery: () => void;
+  openGallery: () => void;
 }
 
 export const useGallery = ({
   onSelectImage,
-  imagesPerPage = 30,
   scrollY = new Animated.Value(0),
 }: UseGalleryProps): {
   state: GalleryState;
   actions: GalleryActions;
   refs: {
-    flatListRef: RefObject<FlatList<MediaLibrary.Asset>>;
+    flatListRef: RefObject<FlashList<MediaLibrary.Asset>>;
   };
 } => {
   // State
@@ -44,16 +43,13 @@ export const useGallery = ({
     recentImages: [],
     selectedAssetId: null,
     isLoading: false,
-    hasMoreImages: true,
     error: null,
     permissionStatus: null,
     isGalleryOpen: false,
   });
 
   // Refs
-  const endCursorRef = useRef<string | undefined>(undefined);
-  const pageRef = useRef<number>(1);
-  const flatListRef = useRef<FlatList<MediaLibrary.Asset>>(null);
+  const flatListRef = useRef<FlashList<MediaLibrary.Asset>>(null);
 
   // Permission handling
   const checkAndRequestPermissions = async (): Promise<boolean> => {
@@ -98,65 +94,64 @@ export const useGallery = ({
     });
   }, [scrollY]);
 
-  // Load images
-  const loadRecentImages = useCallback(
-    async (nextPage = 1) => {
-      if (state.isLoading || (!state.hasMoreImages && nextPage !== 1)) {
+  const openGallery = useCallback(() => {
+    Animated.spring(scrollY, {
+      toValue: 1000,
+      useNativeDriver: true,
+      tension: 65,
+      friction: 11,
+    }).start(() => {
+      setState((prev) => ({ ...prev, isGalleryOpen: true }));
+    });
+  }, [scrollY]);
+
+  // Load all images
+  const loadRecentImages = useCallback(async () => {
+    if (state.isLoading) return;
+
+    setState((prev) => ({ ...prev, isLoading: true, error: null }));
+
+    try {
+      const hasPermission = await checkAndRequestPermissions();
+      if (!hasPermission) return;
+
+      // Get all assets without specifying an album
+      const initialQuery = await MediaLibrary.getAssetsAsync({
+        mediaType: MediaLibrary.MediaType.photo,
+        sortBy: [["creationTime", false]],
+      });
+
+      if (initialQuery.totalCount === 0) {
+        setState((prev) => ({
+          ...prev,
+          recentImages: [],
+          isLoading: false,
+        }));
         return;
       }
 
-      setState((prev) => ({ ...prev, isLoading: true, error: null }));
+      // Load all assets in a single request
+      const response = await MediaLibrary.getAssetsAsync({
+        mediaType: MediaLibrary.MediaType.photo,
+        sortBy: [["creationTime", false]],
+        first: initialQuery.totalCount,
+      });
 
-      try {
-        const hasPermission = await checkAndRequestPermissions();
-        if (!hasPermission) return;
-
-        const albums = await MediaLibrary.getAlbumsAsync();
-        const cameraRoll = albums.find(
-          (album) =>
-            album.title === "Camera Roll" ||
-            album.title === "Recent" ||
-            album.title === "All Photos"
-        );
-
-        const options: MediaLibrary.AssetsOptions = {
-          first: imagesPerPage,
-          mediaType: MediaLibrary.MediaType.photo,
-          sortBy: [["creationTime", false]],
-          after: nextPage === 1 ? undefined : endCursorRef.current,
-          album: cameraRoll,
-        };
-
-        const response = await MediaLibrary.getAssetsAsync(options);
-        const newAssets = response.assets;
-
-        setState((prev) => ({
-          ...prev,
-          recentImages:
-            nextPage === 1 ? newAssets : [...prev.recentImages, ...newAssets],
-          hasMoreImages: response.hasNextPage,
-          isLoading: false,
-          error: null,
-        }));
-
-        if (nextPage === 1 && newAssets.length > 0) {
-          const firstAsset = newAssets[0];
-          handleSelectImage(firstAsset);
-        }
-
-        endCursorRef.current = response.endCursor;
-        pageRef.current = nextPage;
-      } catch (error) {
-        console.error("Error loading images:", error);
-        setState((prev) => ({
-          ...prev,
-          error: "Failed to load images",
-          isLoading: false,
-        }));
-      }
-    },
-    [state.isLoading, state.hasMoreImages, imagesPerPage]
-  );
+      setState((prev) => ({
+        ...prev,
+        recentImages: response.assets,
+        isLoading: false,
+        error: null,
+      }));
+    } catch (error) {
+      console.error("Error loading images:", error);
+      setState((prev) => ({
+        ...prev,
+        error: "Failed to load images",
+        isLoading: false,
+      }));
+    }
+  }, [state.isLoading]);
 
   // Select image
   const handleSelectImage = useCallback(
@@ -168,9 +163,7 @@ export const useGallery = ({
             ? asset.uri
             : assetInfo.localUri || assetInfo.uri;
 
-        setState((prev) => ({ ...prev, selectedAssetId: asset.id }));
         onSelectImage(uri);
-        closeGallery();
       } catch (error) {
         console.error("Error selecting image:", error);
         setState((prev) => ({
@@ -195,7 +188,8 @@ export const useGallery = ({
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
         onSelectImage(asset.uri);
-        await loadRecentImages(1);
+        flatListRef.current?.scrollToOffset({ offset: 0 });
+        closeGallery();
       }
     } catch (error) {
       console.error("Error picking image:", error);
@@ -209,12 +203,12 @@ export const useGallery = ({
   // Retry loading images
   const retryLoadImages = async () => {
     setState((prev) => ({ ...prev, error: null }));
-    await loadRecentImages(1);
+    await loadRecentImages();
   };
 
   // Initial load
   useEffect(() => {
-    loadRecentImages(1);
+    loadRecentImages();
   }, []);
 
   return {
@@ -222,7 +216,6 @@ export const useGallery = ({
       recentImages: state.recentImages,
       selectedAssetId: state.selectedAssetId,
       isLoading: state.isLoading,
-      hasMoreImages: state.hasMoreImages,
       error: state.error,
       permissionStatus: state.permissionStatus,
       isGalleryOpen: state.isGalleryOpen,
@@ -233,6 +226,7 @@ export const useGallery = ({
       openImagePicker,
       retryLoadImages,
       closeGallery,
+      openGallery,
     },
     refs: {
       flatListRef,

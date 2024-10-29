@@ -62,20 +62,7 @@ export const useAddShot = (): UseAddShotReturn => {
     }
   }, [router, state.selectedImage, state.postText]);
 
-  const handleNext = useCallback(() => {
-    if (!state.selectedImage) {
-      Alert.alert("Erreur", "Veuillez sélectionner une image");
-      return;
-    }
-
-    setState((prev) => ({ ...prev, isEditing: true }));
-  }, [state.selectedImage]);
-
-  const handleImagePreview = useCallback((visible: boolean) => {
-    setState((prev) => ({ ...prev, isImagePreviewVisible: visible }));
-  }, []);
-
-  const validatePost = useCallback(() => {
+  const validatePost = () => {
     if (!state.selectedImage) {
       Alert.alert("Erreur", "Veuillez sélectionner une image");
       return false;
@@ -95,7 +82,29 @@ export const useAddShot = (): UseAddShotReturn => {
     }
 
     return true;
-  }, [state.selectedImage, state.postText]);
+  };
+
+  const handleNext = useCallback(() => {
+    if (state.isEditing) {
+      // If we're in editing mode, validate the entire post
+      if (validatePost()) {
+        // TODO: Here you would typically handle the submission
+        // For example: submitPost(state.selectedImage, state.postText)
+        console.log("Post validated and ready for submission");
+      }
+    } else {
+      // If we're not in editing mode, just check for image selection
+      if (!state.selectedImage) {
+        Alert.alert("Erreur", "Veuillez sélectionner une image");
+        return;
+      }
+      setState((prev) => ({ ...prev, isEditing: true }));
+    }
+  }, [state.isEditing, state.selectedImage, validatePost]);
+
+  const handleImagePreview = useCallback((visible: boolean) => {
+    setState((prev) => ({ ...prev, isImagePreviewVisible: visible }));
+  }, []);
 
   return {
     state,

@@ -51,6 +51,8 @@ interface AddShotTemplateProps {
   toggleCameraType: () => void;
   toggleFlash: () => void;
   handleEditComplete: (ImageData: ImageData) => void;
+  openGallery: () => void;
+  closeGallery: () => void;
   isEditingText?: boolean;
 }
 
@@ -79,6 +81,8 @@ export const AddShotTemplate: React.FC<AddShotTemplateProps> = ({
   toggleFlash,
   handleEditComplete,
   isEditingText = false,
+  openGallery,
+  closeGallery,
 }) => {
   const imageOpacity = scrollY.interpolate({
     inputRange: [0, IMAGE_HEIGHT],
@@ -110,9 +114,6 @@ export const AddShotTemplate: React.FC<AddShotTemplateProps> = ({
           onNext={onNext}
           isEditing={isEditingText}
         />
-
-        {/* Theme Alert */}
-        {!isEditingText && showThemeAlert && <ThemeAlert theme={theme} />}
       </View>
 
       {isEditingText ? (
@@ -152,7 +153,15 @@ export const AddShotTemplate: React.FC<AddShotTemplateProps> = ({
         </KeyboardAvoidingView>
       ) : (
         <>
-          {/* Selected Image */}
+          <Animated.View
+            style={{
+              opacity: imageOpacity,
+              transform: [{ scale: imageScale }],
+            }}
+          >
+            {!isEditingText && !isGalleryOpen && <ThemeAlert theme={theme} />}
+          </Animated.View>
+
           <Animated.View
             style={{
               opacity: imageOpacity,
