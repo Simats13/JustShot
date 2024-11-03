@@ -12,13 +12,14 @@ import {
   Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import tweets from "@/app/config/tweets";
+import { usePostStore } from "@/hooks/usePosts";
 
 export default function Home() {
   const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
   const lastScrollY = useRef(0);
   const flatListRef = useRef(null);
+  const posts = usePostStore((state) => state.posts);
 
   const headerHeight = 60;
   const headerOpacity = useRef(new Animated.Value(1)).current;
@@ -28,7 +29,6 @@ export default function Home() {
   const { width } = Dimensions.get("window");
 
   const ITEM_SIZE = width / 3 - 8;
-
 
   useScrollToTop(flatListRef);
 
@@ -93,7 +93,7 @@ export default function Home() {
       {renderHeader()}
       <FlashList
         ref={flatListRef}
-        data={tweets}
+        data={posts}
         renderItem={({ item }) => <JustShotPhoto justphotoposts={item} />}
         keyExtractor={(item) => item.id.toString()}
         onScroll={handleScroll}

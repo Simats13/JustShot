@@ -1,13 +1,15 @@
 import { useState, useRef, useCallback } from "react";
 import { Alert, Animated } from "react-native";
 import { AddShotTemplate } from "@/components/04-templates/AddShotTemplate";
-import { AddShotTextTemplate } from "@/components/04-templates/AddShotTextTemplate";
 import { RequestPermission } from "@/components/RequestPermission";
 import { useGallery } from "@/hooks/useGallery";
 import { useCamera } from "@/hooks/useCamera";
 import { Gallery } from "@/components/03-organisms/Gallery";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAddShot } from "@/hooks/useAddShot";
+import { router } from "expo-router";
+import { JustPhotoType } from "@/types/JustPhotoTypes";
+import { usePostStore } from "@/hooks/usePosts";
 
 const DAILY_THEME = "La nature en ville";
 
@@ -19,6 +21,7 @@ export const AddShot = () => {
   const [isCameraVisible, setIsCameraVisible] = useState(false);
   const [isEditingText, setIsEditingText] = useState(false);
   const [showThemeAlert, setShowThemeAlert] = useState(true);
+  const { addPost, setLoading } = usePostStore();
 
   // Permissions
   const { cameraPermission, requestPermission } = usePermissions();
@@ -37,12 +40,7 @@ export const AddShot = () => {
 
   // Gallery management
   const {
-    state: {
-      recentImages,
-      selectedAssetId,
-      isLoading,
-      isGalleryOpen,
-    },
+    state: { recentImages, selectedAssetId, isLoading, isGalleryOpen },
     actions: { handleSelectImage, openImagePicker, closeGallery, openGallery },
     refs: { flatListRef },
   } = useGallery({
@@ -66,7 +64,7 @@ export const AddShot = () => {
     if (isEditingText) {
       setIsEditingText(false);
     } else {
-      baseHandleBack();
+      baseHandleNext();
     }
   }, [isEditingText, baseHandleBack]);
 
@@ -74,7 +72,26 @@ export const AddShot = () => {
     if (!isEditingText && selectedImage) {
       setIsEditingText(true);
     } else {
-      baseHandleNext();
+      setLoading(true);
+      const newPost: JustPhotoType = {
+        id: Date.now().toString(),
+        user: {
+          id: "user_id",
+          name: "User Name",
+          username: "username",
+        },
+        content: postText,
+        createdAt: new Date().toISOString(),
+        image: selectedImage || "",
+        numberOfComments: 0,
+        numberOfRetweets: 0,
+        numberOfLikes: 0,
+        impressions: 0,
+      };
+      console.log("Post data", { selectedImage, postText });
+      addPost(newPost);
+      setLoading(false);
+      router.back();
     }
   }, [isEditingText, selectedImage, baseHandleNext]);
 
@@ -111,8 +128,6 @@ export const AddShot = () => {
       onBack={handleBack}
       onNext={handleNext}
       theme={DAILY_THEME}
-      openGallery={openGallery}
-      closeGallery={closeGallery}
       previewVisible={isImagePreviewVisible}
       onPreviewClose={() => handleImagePreview(false)}
       onImagePress={() => handleImagePreview(true)}

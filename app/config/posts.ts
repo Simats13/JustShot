@@ -1,4 +1,4 @@
-const tweets = [
+const posts = [
   {
     id: 't0',
     user: {
@@ -134,4 +134,4 @@ const tweets = [
   },
 ];
 
-export default tweets;
+export default posts;

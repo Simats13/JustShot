@@ -51,8 +51,6 @@ interface AddShotTemplateProps {
   toggleCameraType: () => void;
   toggleFlash: () => void;
   handleEditComplete: (ImageData: ImageData) => void;
-  openGallery: () => void;
-  closeGallery: () => void;
   isEditingText?: boolean;
 }
 
@@ -70,7 +68,6 @@ export const AddShotTemplate: React.FC<AddShotTemplateProps> = ({
   onOpenCamera,
   isGalleryOpen = false,
   scrollY = new Animated.Value(0),
-  showThemeAlert = true,
   showThemePopup = () => {},
   cameraRef,
   flash,
@@ -81,8 +78,6 @@ export const AddShotTemplate: React.FC<AddShotTemplateProps> = ({
   toggleFlash,
   handleEditComplete,
   isEditingText = false,
-  openGallery,
-  closeGallery,
 }) => {
   const imageOpacity = scrollY.interpolate({
     inputRange: [0, IMAGE_HEIGHT],

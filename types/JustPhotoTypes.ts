@@ -1,4 +1,4 @@
-type User = {
+export type User = {
   id: string;
   name: string;
   username: string;
@@ -6,13 +6,14 @@ type User = {
 };
 
 export type JustPhotoType = {
-    id: string;
-    user: User;
-    content: string;
-    createdAt: string;
-    numberOfComments?: number;
-    numberOfRetweets?: number;
-    numberOfLikes?: number;
-    impressions?: number;
-    image?: string;
+  id: string;
+  user: User;
+  content: string;
+  createdAt: string;
+  numberOfComments?: number;
+  numberOfRetweets?: number;
+  numberOfLikes?: number;
+  impressions?: number;
+  image?: string;
 };
+
