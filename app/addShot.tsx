@@ -9,7 +9,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useAddShot } from "@/hooks/useAddShot";
 import { router } from "expo-router";
 import { JustPhotoType } from "@/types/JustPhotoTypes";
-import { usePostStore } from "@/hooks/usePosts";
+import { useAddPost } from "@/hooks/usePosts";
 
 const DAILY_THEME = "La nature en ville";
 
@@ -21,7 +21,9 @@ export const AddShot = () => {
   const [isCameraVisible, setIsCameraVisible] = useState(false);
   const [isEditingText, setIsEditingText] = useState(false);
   const [showThemeAlert, setShowThemeAlert] = useState(true);
-  const { addPost, setLoading } = usePostStore();
+
+  // TanStack Query mutation hook
+  const { mutate: addPost, isPending: isAddingPost } = useAddPost();
 
   // Permissions
   const { cameraPermission, requestPermission } = usePermissions();
@@ -64,21 +66,26 @@ export const AddShot = () => {
     if (isEditingText) {
       setIsEditingText(false);
     } else {
-      baseHandleNext();
+      baseHandleBack();
     }
   }, [isEditingText, baseHandleBack]);
 
   const handleNext = useCallback(() => {
+    if (!selectedImage) {
+      Alert.alert("Aucune image selectionnée", "Veillez sélectionner une image", [{ text: "OK" }]);
+      return;
+    }
+    
     if (!isEditingText && selectedImage) {
       setIsEditingText(true);
     } else {
-      setLoading(true);
       const newPost: JustPhotoType = {
         id: Date.now().toString(),
         user: {
           id: "user_id",
           name: "User Name",
           username: "username",
+          image: "https://picsum.photos/200",
         },
         content: postText,
         createdAt: new Date().toISOString(),
@@ -88,12 +95,19 @@ export const AddShot = () => {
         numberOfLikes: 0,
         impressions: 0,
       };
-      console.log("Post data", { selectedImage, postText });
-      addPost(newPost);
-      setLoading(false);
-      router.back();
+
+      addPost(newPost, {
+        onSuccess: () => {
+          router.back();
+        },
+        onError: (error) => {
+          Alert.alert("Error", "Failed to add post. Please try again.", [
+            { text: "OK" },
+          ]);
+        },
+      });
     }
-  }, [isEditingText, selectedImage, baseHandleNext]);
+  }, [isEditingText, selectedImage, postText, addPost]);
 
   const showThemePopup = useCallback(() => {
     Alert.alert(

@@ -1,6 +1,6 @@
 import JustShotPhoto from "@/components/JustShotPhoto";
 import { useScrollToTop } from "@react-navigation/native";
-import React, { useRef, useCallback } from "react";
+import React, { useRef, useCallback, useEffect } from "react";
 import { FlashList } from "@shopify/flash-list";
 
 import {
@@ -10,27 +10,32 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { usePostStore } from "@/hooks/usePosts";
+import { usePosts } from "@/hooks/usePosts";
 
 export default function Home() {
   const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
   const lastScrollY = useRef(0);
   const flatListRef = useRef(null);
-  const posts = usePostStore((state) => state.posts);
 
   const headerHeight = 60;
   const headerOpacity = useRef(new Animated.Value(1)).current;
 
-  // Estimate the height of the bottom navigation bar
-  const bottomNavHeight = 50; // Adjust this value based on your actual navbar height
+  const bottomNavHeight = 50;
   const { width } = Dimensions.get("window");
 
   const ITEM_SIZE = width / 3 - 8;
 
   useScrollToTop(flatListRef);
+
+  const { data: posts, isLoading, refetch: fetchPosts } = usePosts();
+
+  // useEffect(() => {
+  //   fetchPosts();
+  // }, []);
 
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -90,6 +95,7 @@ export default function Home() {
 
   return (
     <View style={{ flex: 1 }}>
+      {isLoading && <ActivityIndicator />}
       {renderHeader()}
       <FlashList
         ref={flatListRef}
