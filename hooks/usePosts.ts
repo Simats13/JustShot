@@ -8,9 +8,15 @@ import {
   getFirestore,
   serverTimestamp,
 } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import {
+  getStorage,
+  ref,
+  uploadBytesResumable,
+  getDownloadURL,
+} from "firebase/storage";
 import { app } from "@/app/config/firebase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -38,8 +44,6 @@ const fetchPosts = async (): Promise<JustPhotoType[]> => {
 
 const convertLocalFileToBlob = async (localPath: string): Promise<Blob> => {
   try {
-    // For React Native, you'll need to use the appropriate file reading method
-    // This example uses fetch which works in React Native
     const response = await fetch(localPath);
     const blob = await response.blob();
     return blob;
@@ -49,18 +53,39 @@ const convertLocalFileToBlob = async (localPath: string): Promise<Blob> => {
   }
 };
 
-const uploadImage = async (imagePath: string): Promise<string> => {
+const uploadImage = async (
+  imagePath: string,
+  onProgress?: (progress: number) => void
+): Promise<string> => {
   try {
     const blob = await convertLocalFileToBlob(imagePath);
     const fileExtension = imagePath.split(".").pop()?.toLowerCase() || "jpg";
     const storageRef = ref(storage, `images/${Date.now()}.${fileExtension}`);
 
-    // Upload the blob
-    await uploadBytes(storageRef, blob);
+    return new Promise((resolve, reject) => {
+      const uploadTask = uploadBytesResumable(storageRef, blob);
 
-    // Get the download URL
-    const downloadURL = await getDownloadURL(storageRef);
-    return downloadURL;
+      uploadTask.on(
+        "state_changed",
+        (snapshot) => {
+          const progress =
+            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          onProgress?.(progress);
+        },
+        (error) => {
+          console.error("Error during upload:", error);
+          reject(error);
+        },
+        async () => {
+          try {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            resolve(downloadURL);
+          } catch (error) {
+            reject(error);
+          }
+        }
+      );
+    });
   } catch (error) {
     console.error("Error uploading image:", error);
     throw error;
@@ -68,14 +93,15 @@ const uploadImage = async (imagePath: string): Promise<string> => {
 };
 
 const addPost = async (
-  newPost: Omit<JustPhotoType, "id" | "createdAt">
+  newPost: Omit<JustPhotoType, "id" | "createdAt">,
+  onProgress?: (progress: number) => void
 ): Promise<JustPhotoType> => {
   try {
     let imageUrl = newPost.image;
 
     // Check if image is a local file path
     if (newPost.image && newPost.image.startsWith("file://")) {
-      imageUrl = await uploadImage(newPost.image);
+      imageUrl = await uploadImage(newPost.image, onProgress);
     }
 
     const postToAdd = {
@@ -90,7 +116,7 @@ const addPost = async (
     return {
       ...postToAdd,
       id: docRef.id,
-      createdAt: new Date().toISOString(), // For optimistic update
+      createdAt: new Date().toISOString(),
     } as JustPhotoType;
   } catch (error) {
     console.error("Error adding post:", error);
@@ -107,9 +133,25 @@ export const usePosts = () => {
 
 export const useAddPost = () => {
   const queryClient = useQueryClient();
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadingImage, setUploadingImage] = useState<string | null>(null);
 
-  return useMutation({
-    mutationFn: addPost,
+  const mutation = useMutation({
+    mutationFn: async (newPost: Omit<JustPhotoType, "id" | "createdAt">) => {
+      try {
+        if (newPost.image!.startsWith("file://")) {
+          setUploadingImage(newPost.image!);
+        }
+        
+        const result = await addPost(newPost, (progress) => setUploadProgress(progress));
+        
+        setUploadingImage(null);
+        return result;
+      } catch (error) {
+        setUploadingImage(null);
+        throw error;
+      }
+    },
     onMutate: async (newPost) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.posts });
       const previousPosts = queryClient.getQueryData<JustPhotoType[]>(
@@ -131,9 +173,18 @@ export const useAddPost = () => {
       if (context?.previousPosts) {
         queryClient.setQueryData(queryKeys.posts, context.previousPosts);
       }
+      setUploadingImage(null);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.posts });
+      setUploadProgress(0);
+      setUploadingImage(null);
     },
   });
+
+  return {
+    ...mutation,
+    uploadProgress,
+    uploadingImage,
+  };
 };

@@ -1,115 +1,71 @@
 import JustShotPhoto from "@/components/JustShotPhoto";
 import { useScrollToTop } from "@react-navigation/native";
-import React, { useRef, useCallback, useEffect } from "react";
+import React, { useRef, useCallback, useState } from "react";
 import { FlashList } from "@shopify/flash-list";
-
 import {
   View,
-  Text,
-  Animated,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
   Dimensions,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usePosts } from "@/hooks/usePosts";
 
 export default function Home() {
   const insets = useSafeAreaInsets();
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const lastScrollY = useRef(0);
   const flatListRef = useRef(null);
-
-  const headerHeight = 60;
-  const headerOpacity = useRef(new Animated.Value(1)).current;
+  const [refreshing, setRefreshing] = useState(false);
 
   const bottomNavHeight = 50;
   const { width } = Dimensions.get("window");
-
   const ITEM_SIZE = width / 3 - 8;
 
   useScrollToTop(flatListRef);
 
   const { data: posts, isLoading, refetch: fetchPosts } = usePosts();
 
-  // useEffect(() => {
-  //   fetchPosts();
-  // }, []);
-
-  const handleScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const currentScrollY = event.nativeEvent.contentOffset.y;
-      const diff = currentScrollY - lastScrollY.current;
-
-      if (currentScrollY <= 0) {
-        // At the top of the list
-        Animated.timing(headerOpacity, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }).start();
-      } else if (diff > 0) {
-        // Scrolling down
-        Animated.timing(headerOpacity, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }).start();
-      } else if (diff < 0) {
-        // Scrolling up
-        Animated.timing(headerOpacity, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }).start();
-      }
-
-      lastScrollY.current = currentScrollY;
-      scrollY.setValue(currentScrollY);
-    },
-    [headerOpacity, scrollY]
-  );
-
-  const renderHeader = () => (
-    <Animated.View
-      style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        height: headerHeight + insets.top,
-        backgroundColor: "white",
-        opacity: headerOpacity,
-        zIndex: 1000,
-        paddingTop: insets.top,
-        justifyContent: "center",
-        alignItems: "center",
-        borderBottomWidth: 1,
-        borderBottomColor: "#e0e0e0",
-      }}
-    >
-      <Text style={{ fontSize: 18, fontWeight: "bold" }}>Accueil</Text>
-    </Animated.View>
-  );
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await fetchPosts();
+    } catch (error) {
+      console.error("Error refreshing posts:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchPosts]);
 
   return (
-    <View style={{ flex: 1 }}>
-      {isLoading && <ActivityIndicator />}
-      {renderHeader()}
-      <FlashList
-        ref={flatListRef}
-        data={posts}
-        renderItem={({ item }) => <JustShotPhoto justphotoposts={item} />}
-        keyExtractor={(item) => item.id.toString()}
-        onScroll={handleScroll}
-        estimatedItemSize={ITEM_SIZE}
-        scrollEventThrottle={16}
-        contentContainerStyle={{
-          paddingTop: headerHeight + insets.top,
-          paddingBottom: bottomNavHeight + insets.bottom + 20,
-        }}
-      />
+    <View
+      style={{
+        flex: 1,
+        justifyContent: "space-between",
+        paddingTop: insets.top,
+        paddingBottom: insets.bottom + bottomNavHeight + 20,
+        paddingLeft: insets.left,
+        paddingRight: insets.right,
+      }}
+    >
+      {isLoading ? (
+        <ActivityIndicator />
+      ) : (
+        <FlashList
+          ref={flatListRef}
+          data={posts}
+          renderItem={({ item }) => <JustShotPhoto justphotoposts={item} />}
+          keyExtractor={(item) => item.id.toString()}
+          estimatedItemSize={ITEM_SIZE}
+          removeClippedSubviews={true}
+          scrollEventThrottle={16}
+          drawDistance={ITEM_SIZE * 2}
+          overrideItemLayout={(layout, item) => {
+            layout.size = ITEM_SIZE;
+          }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        />
+      )}
     </View>
   );
 }

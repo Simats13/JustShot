@@ -72,10 +72,14 @@ export const AddShot = () => {
 
   const handleNext = useCallback(() => {
     if (!selectedImage) {
-      Alert.alert("Aucune image selectionnée", "Veillez sélectionner une image", [{ text: "OK" }]);
+      Alert.alert(
+        "Aucune image selectionnée",
+        "Veillez sélectionner une image",
+        [{ text: "OK" }]
+      );
       return;
     }
-    
+
     if (!isEditingText && selectedImage) {
       setIsEditingText(true);
     } else {
@@ -96,16 +100,16 @@ export const AddShot = () => {
         impressions: 0,
       };
 
+     
+
       addPost(newPost, {
-        onSuccess: () => {
-          router.back();
-        },
         onError: (error) => {
           Alert.alert("Error", "Failed to add post. Please try again.", [
             { text: "OK" },
           ]);
         },
       });
+      router.back();
     }
   }, [isEditingText, selectedImage, postText, addPost]);
 

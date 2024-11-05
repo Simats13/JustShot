@@ -14,6 +14,6 @@ export type JustPhotoType = {
   numberOfRetweets?: number;
   numberOfLikes?: number;
   impressions?: number;
-  image?: string;
+  image?: string | null;
 };
 
